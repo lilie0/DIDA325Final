@@ -1,0 +1,334 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+rm(list = ls(all.names = TRUE))
+```
+
+
+loading data
+```{r}
+data <- read.csv(file = '/Users/lilyg/Downloads/data.csv', sep = ';') 
+```
+
+
+loading libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(randomForest)
+```
+
+
+
+data cleaning
+
+```{r}
+
+head(data)
+dim(data)
+summary(data)
+
+data %>% rename(
+  marital_status = Marital.status,
+  application_mode = Application.mode, 
+  application_order = Application.order,
+  course = Course,
+  attendance = Daytime.evening.attendance.,
+  prev_qual = Previous.qualification,
+  prev_qual_grade = Previous.qualification..grade.,
+  nationality = Nacionality,
+  mother_qual = Mother.s.qualification,
+  father_qual = Father.s.qualification,
+  mother_occ = Mother.s.occupation,
+  father_occ = Father.s.occupation,
+  admit_grade = Admission.grade,
+  displaced = Displaced, 
+  edu_special_needs = Educational.special.needs,
+  debtor = Debtor,
+  tuition = Tuition.fees.up.to.date,
+  gender = Gender,
+  scholarship = Scholarship.holder,
+  age = Age.at.enrollment,
+  intl = International,
+  units1_credited = Curricular.units.1st.sem..credited.,
+  units1_enroll = Curricular.units.1st.sem..enrolled.,
+  units1_eval = Curricular.units.1st.sem..evaluations.,
+  units1_approve = Curricular.units.1st.sem..approved.,
+  units1_grade = Curricular.units.1st.sem..grade.,
+  units1_noeval = Curricular.units.1st.sem..without.evaluations.,
+  units2_credited = Curricular.units.2nd.sem..credited.,
+  units2_enroll = Curricular.units.2nd.sem..enrolled.,
+  units2_eval = Curricular.units.2nd.sem..evaluations.,
+  units2_approve = Curricular.units.2nd.sem..approved.,
+  units2_grade = Curricular.units.2nd.sem..grade.,
+  units2_noeval = Curricular.units.2nd.sem..without.evaluations.,
+  unemployment_rate = Unemployment.rate,
+  inflation_rate = Inflation.rate, 
+  target = Target
+  ) -> data
+
+course_names <- c(
+  '33' = "Biofuel Production Technologies",
+  '171' = "Animation and Multimedia Design",
+  '8014' = "Social Service (evening)",
+  '9003' = "Agronomy",
+  '9070' = "Communication Design",
+  '9085' = "Veterinary Nursing",
+  '9119' = "Informatics Engineering",
+  '9130' = "Equinculture",
+  '9147'= "Management",
+  '9238' = "Social Service",
+  '9254' = "Tourism",
+  '9500' = "Nursing",
+  '9556' = "Oral Hygiene",
+  '9670' = "Advertising and Marketing Management",
+  '9773' = "Journalism and Communication",
+  '9853' = "Basic Education",
+  '9991' = "Management (evening)"
+) #this helps me with faceting later on. from here: https://stackoverflow.com/questions/3472980/how-to-change-facet-labels
+
+```
+
+data visualization: i used some of this to help me with renaming variables in the plots: https://joeystanley.com/downloads/180223=ggplot2-part2
+
+
+```{r}
+cbPalette <- c("#000000", "#56B4E9", "#CC79A7")
+```
+
+student outcomes across courses 
+
+```{r}
+
+ggplot(data = data, aes(x = target, fill = as.character(course))) + 
+  geom_bar(position = "dodge", show.legend = FALSE) +
+  labs(x = "Target", y = "Count", fill = "Course", title = "Student Outcomes Across Courses") +
+  facet_wrap(. ~ course, labeller=as_labeller(course_names))
+
+```
+graph comparing age and outcome
+
+```{r}
+
+ggplot(data %>% count(age, target), 
+    aes(age, n, fill=target)) +
+    geom_bar(stat="identity") + 
+    labs(
+      x = "Age at Enrollment",
+      y = "Count",
+      fill = "Target",
+      title = "Age at Enrollment and Student Outcomes"
+    ) 
+```
+
+grades across semesters + outcomes
+
+```{r}
+
+filter(data, units1_grade>0, units2_grade>0) -> mini_data
+
+ggplot(data = mini_data, 
+       aes(x = units1_grade,
+           y = units2_grade, 
+           color = target)) + 
+  geom_point(alpha=0.5) + 
+  labs(x = "Grade average in the 1st semester",  # We have to remember to change the label
+       y = "Grade average in the 2nd semester",
+       color = "Target",
+       title = "Relationship between Student Grades per Semester, excluding 0s") +
+  theme(plot.title = element_text(hjust=0.5)) +
+  scale_colour_manual(values=cbPalette) +
+  theme_minimal() 
+
+```
+
+
+
+other graphs (not used in paper, but helped me get familiar with the data)
+
+```{r}
+
+ggplot(data = data, aes(x = target, fill = as.character(gender))) + 
+  geom_bar(position = "dodge") + 
+  labs(
+    x = "Target",
+    y = course_names,
+    fill = "Gender") + 
+   scale_fill_discrete(labels=c('Female', 'Male'))
+#tells us that women tend to graduate more of the graduating class
+
+ggplot(data = data, aes(x = as.character(course), fill = as.character(gender))) + 
+  geom_bar(position = "dodge") + 
+  labs(
+    x = "Course",
+    y = "Count",
+    fill = "Gender") + 
+   scale_fill_discrete(labels=c('Female', 'Male'))
+
+ggplot(data = data, aes(x = target, fill = as.character(course))) + 
+  geom_bar(position = "dodge") + 
+  labs(
+    x = "Target",
+    y = "Count",
+    fill = "Course",) + 
+    scale_fill_discrete(labels=c('Biofuel Production Technologies', 'Animation and Multimedia Design', 'Social Service', 'Agronomy', 'Communication Design', 'Veterinary Nursing', 'Informatics Engineering', 'Equinculture', 'Management', 'Social Service', 'Tourism', 'Nursing', 'Oral Hygiene', 'Advertising and Marketing Management', 'Journalism and Communication', 'Basic Education', 'Management'
+   ))
+
+ggplot(data = data, aes(x = target, fill = scholarship)) + 
+  geom_bar(position = "dodge") + 
+  labs(
+    x = "Target",
+    y = "Count",
+    fill = "Scholarship Holder"
+  ) + 
+  scale_fill_discrete(labels=c("No","Yes"))
+
+ggplot(data %>% count(age, target), 
+    aes(age, n, fill=target)) +
+    geom_bar(position = "dodge", stat="identity") + 
+    labs(
+      x = "Age at Enrollment",
+      y = "Count",
+      fill = "Target"
+    )
+
+
+ggplot(data = data, aes(x = target, fill = as.character(marital_status))) + 
+  geom_bar(position = "dodge") + 
+  labs(
+    x = "Target",
+    y = "Count",
+    fill = "Marital Status"
+  ) + 
+  scale_fill_discrete(labels=c("Single","Married","Widower","Divorced","Facto Union","Legally Separated"))
+
+```
+
+more cleaning: here i am factoring the target column so that i can create machine learning models. i am also deleting rows with "enrolled" students because this helped with accuracy
+
+
+```{r}
+as.numeric(as.factor(data$target)) -> numeric_target
+
+data -> df
+
+df$target <- numeric_target
+
+filter(df, target == 1 | target == 3) -> df
+
+ifelse(df$target==1,0,1) -> df$target
+
+head(df)
+
+```
+correlation table: i used this article to customize it https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+```{r}
+corr_table <- cor(df)
+corr_table
+
+corrplot(corr_table, method = 'color', tl.col = 'black', tl.cex = 0.5, cl.cex = 0.5, col = COL2('PiYG'))
+```
+here is a version with numbers: 
+```{r}
+corrplot(corr_table, method = 'color', tl.col = 'black', addCoef.col = 'black', number.cex=0.3, tl.cex = 0.5, cl.cex = 0.5, col = COL2('PiYG'))
+```
+
+
+
+more visualization (this was not very helpful and not used in the paper). 
+
+```{r}
+ggplot(data = df, aes(x = prev_qual,
+           y = mother_qual, 
+           color = target)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+ggplot(data = df, aes(x = prev_qual,
+           y = father_qual, 
+           color = course)) + 
+  geom_point() + 
+  geom_smooth(method = "lm") 
+
+ggplot(df, aes(x=age, y=target)) + geom_point() +
+      geom_smooth(method = "glm", se = FALSE, method.args = list(family = "binomial")) 
+
+ggplot(df, aes(x=units1_grade, y=target)) + geom_point() +
+      geom_smooth( method = "glm", se = FALSE, method.args = list(family = "binomial"))
+
+ggplot(df, aes(x=attendance, y=target)) + geom_point() +
+      geom_smooth( method = "glm", se = FALSE, method.args = list(family = "binomial"))
+```
+
+
+logistic regression
+
+```{r}
+set.seed(2024)
+split <- 0.75
+rows  <- nrow(df)
+entries <- sample(rows, rows*split)
+model.train <- df[entries, ]
+model.valid  <- df[-entries,  ]
+
+model <- glm(as.factor(target) ~ units1_approve + units1_grade + units2_approve + units2_grade + debtor + tuition + gender + scholarship + age + edu_special_needs + application_order + attendance + admit_grade + displaced + units1_enroll + units2_enroll + prev_qual_grade + units1_noeval + units2_noeval + GDP + inflation_rate + unemployment_rate, data = model.train, family = binomial)
+
+summary(model) 
+
+probabilities <- predict(model, newdata = model.valid, type = "response")
+predicted <- ifelse(probabilities < 0.5, 0, 1)
+conf_matrix <- table(predicted, model.valid$target)
+conf_matrix
+
+
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+accuracy
+```
+
+```{r}
+
+model.valid <- model.valid %>%
+    mutate(yhat = predict(model, newdata=model.valid)) %>%
+    mutate(residual = target - yhat)
+
+model.train <- model.train %>%
+    mutate(yhat = predict(model, newdata=model.train)) %>%
+    mutate(residual = target - yhat)
+
+head(model.valid)
+
+mean(model.valid$residual, na.rm=T)
+
+ggplot(model.valid) +
+  geom_histogram(aes(x=residual), bins=40, color="black", fill = "lightblue") +
+  xlab("Residual")+
+  theme_minimal()+
+  labs(title = "Distribution of Model Residuals")
+
+sd(model.train$residual, na.rm=T)
+sd(model.valid$residual, na.rm=T)
+
+model.valid <- model.valid %>% 
+  mutate(square_error = residual^2)
+mean(model.valid$square_error, na.rm=T)
+sqrt(mean(model.valid$square_error, na.rm=T))
+
+```
+
+random forest model
+
+
+```{r}
+
+model.train <- model.train %>% select(-c(yhat, residual))
+
+rf.fit <- randomForest(as.factor(target) ~ ., data=model.train, ntree=1000, mtry = 1, keep.forest=T, importance=T)
+
+rf.fit
+
+```
+
