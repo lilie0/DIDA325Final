@@ -10,7 +10,7 @@ rm(list = ls(all.names = TRUE))
 
 loading data
 ```{r}
-data <- read.csv(file = '/Users/lilyg/Downloads/data.csv', sep = ';') 
+data <- read.csv(file = '/Users/lilyg/predicting-student-success/data.csv', sep = ';') 
 ```
 
 
@@ -265,7 +265,7 @@ ggplot(df, aes(x=attendance, y=target)) + geom_point() +
 ```
 
 
-logistic regression
+logistic regression model
 
 ```{r}
 set.seed(2024)
@@ -288,6 +288,7 @@ conf_matrix
 accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
 accuracy
 ```
+analysis of model
 
 ```{r}
 
@@ -331,4 +332,3 @@ rf.fit <- randomForest(as.factor(target) ~ ., data=model.train, ntree=1000, mtry
 rf.fit
 
 ```
-
